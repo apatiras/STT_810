@@ -1,0 +1,627 @@
+---
+title: "Mini Project 2"
+author: "Suliah Apatira & Jasmine Harris"
+date: "12/3/2022"
+output: word_document
+---
+
+##1 Exploratory Data Analysis
+In this project, we downloaded the song dataset and assigned it as the variable ‘song’.
+```{r Import Data}
+#Bringing in and visualizing song data
+song <- read.csv("C:\\Users\\apati\\OneDrive\\Documents\\Michigan State\\STT 810\\song_data.csv")
+
+#establishing each variable
+song_popularity <- song$song_popularity
+acousticness <- song$acousticness
+loudness <- song$loudness
+instrumentalness <- song$instrumentalness
+danceability <- song$danceability
+key <- song$key
+audio_valence <- song$audio_valence
+liveness <- song$liveness
+time_signature <- song$time_signature
+tempo <- song$tempo
+speechiness <- song$speechiness
+energy <- song$energy
+audio_mode <- song$audio_mode
+```
+
+Before exploring the data, we first used the str() command to find out which variables were numeric or categorical. 
+```{r Finding which variables are numeric}
+str(song)
+```
+
+
+To first explore the data set we created a ggpairs plot, excluding the song name variable because it is an unusable categorical variable. Then, we printed a ggpairs plot and a correlation matrix. Since the ggpairs plot and the correlation matrix depict the same information, then we will just show the ggpairs plot.
+```{r ggpairs)}
+library(dplyr)
+library(GGally)
+library(ggplot2)
+
+ggpairs(song[2:15])
+```
+
+
+To further visualize the song data we created a corrplot of the correlation matrix:
+```{r Correlation Graph with all data (minus song_name)}
+cor(song[2:15])
+cormat <- cor(song[2:15])
+library("corrplot")
+corrplot(cormat,method = "circle")
+```
+
+
+#Simple Regression/Baseline
+After analyzing the correlation matrix for the song data, we created two simple linear regression models using the two variables with the highest correlation to song popularity. Those two variables were instrumentalness with a correlation of 0.131, and danceability with a correlation of 0.104. Additionally, we did the regression models using a training set and tested them on the test dataset with a 70/30 split. These two simple regression models will be used as a baseline for our final model.
+```{r baseline1}
+set.seed(1)
+summary(lm(song$song_popularity ~ song$instrumentalness, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness )
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+
+plot(song$instrumentalness, song$song_popularity)
+```
+
+```{r baseline2}
+set.seed(2)
+summary(lm(song$song_popularity ~ song$danceability, data = song))
+
+#TEST AND TRAIN
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness )
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+
+plot(song$danceability, song$song_popularity)
+```
+
+#Some description of variable transformations attempted
+From the results above, we decided to create a variety of complex multiple regressions to build better models.
+First, in addition to Baseline 1, we decided to square the variable x. 
+```{r fit 1b}
+summary(lm(song$song_popularity ~ (song$instrumentalness)^2, data = song))
+```
+There is no change between Baseline 1 and model 1b so, to each variable, we included the next variable with the highest correlation to song popularity. We created four linear models for each inclusion.
+The four models have the following operations: 
+A. Addition 
+B. Square of the sum
+C. Multiplication 
+D. Square of the product 
+We will consider these as Steps A-D. From the summary of the linear models, we looked at the residual standard error and the adjusted r-squared value. Adjusted r-squared values are between 0 and 1. Our goal is to see a decrease in the residual standard error and an increase in the adjusted r-squared value. A low residual standard error value and an adjusted r-squared value that is closer to 1 suggests a well-fit model. In addition, we looked at the test-training data set for each model. With the test-training data set, we look to see if the test and train values are close together by calculating the difference between the two. A close difference between the values also represents a well-fit model.
+Below are all of the models tested. 
+
+#Fit Two
+```{r fit 2a}
+summary(lm(song_popularity ~ instrumentalness + danceability, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 2b}
+summary(lm(song_popularity ~ (instrumentalness + danceability)^2, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+
+```{r fit 2c}
+summary(lm(song_popularity ~ instrumentalness * danceability, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 2d}
+summary(lm(song_popularity ~ (instrumentalness * danceability)^2, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+
+
+#Fit Three
+```{r fit 3a, echo=FALSE}
+summary(lm(song_popularity ~ instrumentalness + danceability + loudness, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability + loudness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 3b}
+summary(lm(song_popularity ~ (instrumentalness + danceability + loudness)^2, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 3c}
+summary(lm(song_popularity ~ instrumentalness * danceability * loudness, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 3d}
+summary(lm(song_popularity ~ (instrumentalness * danceability * loudness)^2, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct 
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+
+
+#Fit Four
+```{r fit 4a}
+summary(lm(song_popularity ~ instrumentalness + danceability + loudness + acousticness , data = song))
+
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability + loudness + acousticness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 4b}
+
+summary(lm(song_popularity ~ (instrumentalness + danceability + loudness + acousticness)^2 , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness + acousticness)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+
+```
+
+```{r fit 4c}
+summary(lm(song_popularity ~ instrumentalness * danceability * loudness * acousticness , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness * acousticness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 4d}
+summary(lm(song_popularity ~ (instrumentalness * danceability * loudness * acousticness)^2 , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness * acousticness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+
+#Fit Five
+```{r fit 5a}
+
+summary(lm(song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 5b}
+
+summary(lm(song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence)^2 , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 5c}
+summary(lm(song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 5d}
+summary(lm(song_popularity ~ (instrumentalness * danceability * loudness * acousticness * audio_valence)^2 , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness * danceability * loudness * acousticness * audio_valence)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+Here, we noticed that multiplication and the square of the product (C and D) were giving the same results. Moving forward, we decided to eliminate Step D which is the operation of squaring the product. 
+
+#Fit Six
+```{r fit 6a}
+
+summary(lm(song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence + liveness, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence + liveness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 6b}
+
+summary(lm(song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence + liveness)^2, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence + liveness)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 6c}
+
+summary(lm(song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+#Fit Seven
+```{r fit 7a}
+summary(lm(song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature)
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+```{r fit 7b}
+summary(lm(song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature)^2, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature)^2)
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+
+```{r fit 7c}
+set.seed(123)
+summary(lm(song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness * time_signature, data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness * time_signature)
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+
+```
+
+
+#Fit Eight
+```{r fit 8a}
+summary(lm(song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature + tempo , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature + tempo)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 8b}
+summary(lm(song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature + tempo)^2 , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ (instrumentalness + danceability + loudness + acousticness + audio_valence + liveness + time_signature + tempo)^2)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+```{r fit 8c}
+summary(lm(song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness * time_signature * tempo , data = song))
+
+split_pct <- 0.7
+n <- length(song$song_popularity)*split_pct # train size
+row_samp <- sample(1:length(song$song_popularity), n, replace = FALSE)
+train <- song[row_samp,]
+test <- song[-row_samp,]
+song_train_mod <- lm(data = train, song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness * time_signature * tempo)
+test_pred <- predict(song_train_mod,test)
+test_error <- test$song_popularity - test_pred
+rmse_train <- sqrt(mean(song_train_mod$residuals^2))
+rmse_test <- sqrt(mean(test_error^2))
+rmse_train
+rmse_test
+```
+
+#Feature Engineering 
+To get to our final model, we first arranged our variables from highest to lowest correlations with the song popularity category. This method of arranging from high to low made it easier for us to do feature selection and extraction of low-level features that were unsuitable/counterproductive for learning. We ultimately found that the seven variables with highest correlations created our best model. Those seven variables are instrumentalness, danceability, loudness, acousticness, audio valence, liveness, and time signature.  Any further use of the variables following these seven resulted in a large discrepancy between the training data root mean square error and the tested root mean square error. For example, the root mean square error had a difference greater than 5 between the training root mean square error and tested root mean square error when the tempo variable was included. Whereas, using the seven variables previously mentioned, we found that the difference of root mean square errors is 0.392. This means that the model predicted the data accurately. 
+
+#Summary of Model Fit in Comparison to Baseline
+We used song_popularity ~ instrumentalness and song_popularity~danceability as the baseline models for this project. We chose to use instrumentalness and danceability for the simple regression baseline models because they had the highest correlations with song_popularity. Song_popularity~instrumentalness results in a residual standard error of 21.72 and an R-squared value of 0.01708. The difference between the root mean square error (RMSE) from the training data and to the tested data is 0.0282. Song_popularity~danceability results in a residual standard error of 21.79 and an R-squared value of 0.01082. The difference between the trained data and tested data was 0.1342. Our final model had a residual standard error 21.11 which is .61 lower than our first and best baseline model. The R-squared value is 0.07172 which also has significant improvement from the baseline model. The difference in root mean square error from the trained and tested model data is 0.427 which is not substantially higher than the baseline models. 
+
+
+#Description of whether parameter signs make sense 
+Our model found instrumentalness and loudness had negative parameter signs and danceability, acousticness, audio valence, and time signature had positive parameter signs as they relate to song popularity. Instrumentalness represents whether a track contains any spoken vocals. This sign makes sense because we expect a song to be more popular if it has actual words that listeners can potentially sing along with. Loudness having a negative sign does not make sense because pop, hip hop/rap, and electronic dance music are the most popular music genres right now in the United states. These music genres are known for being loud, so we do not believe loudness having a negative parameter makes sense. Next, it makes sense for danceability,  audio valence, and time signature to have positive signs. Danceability refers to how suitable a track is for dancing based on factors such as tempo, rhythm, and beat strength. Audio valence refers to the happiness or cheerfulness of a song. Time signature indicates how many beats are in each measure of a piece of music. Having a higher time signature means the music is faster or more upbeat. It makes sense for these factors to be positive because popular music is typically cheerful with a nice rhythm or beat that is positive and danceable. Lastly, we do not think it makes sense for acousticness to be positivite once again based on the most popular genres of music. Additionally, we listened to the top 10 songs on the global charts and only one of the ten had an acoustic background. 
+
+
+#Analysis of residuals
+For the analysis of residuals, we plotted a histogram and a normal q-q plot. We analyzed both graphs to determine if the error terms are normally distributed or not. In terms of the histogram, it shows that the residuals are normally distributed around zero. In regards to the normal q-q plot, the plot of residuals is approximately linear which therefore supports the condition that the error terms (residuals) are normally distributed. Since the residuals are normally distributed, it suggests that our model fits the data fairly well.  
+```{r Residuals}
+fit_7c <- lm(song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness * time_signature, data = song)
+ggplot(data = song, aes(fit_7c$residuals))+geom_histogram(binwidth = 10, color = "black", fill = "pink")+ theme(panel.background = element_rect(fill = "white"),axis.line.x = element_line(),axis.line.y = element_line())+ggtitle("Histogram for Model 7c Residuals")
+
+res <- resid(fit_7c)
+qqnorm(res)
+qqline(res,col="red")
+```
+
+
+#Sensitivity Analysis
+Next, we created a sensitivity analysis to visualize how different input variables compare in the song popularity model. As seen in our sensitivity analysis tornado diagram, loudness had the largest impact on the model followed by acousticness, liveness, and instrumentalness. Loudness and instrumentalness are moving in the negative direction, while the other 5 variables are moving in the positive direction. This data agrees with our parameter signs data analysis.
+```{r Sensitivity Analysis }
+song_mod <- lm(data = song, song_popularity ~ instrumentalness * danceability * loudness * acousticness * audio_valence * liveness * time_signature)
+sum_std <- sd(song$instrumentalness)*abs(song_mod$coefficients[2]) +  sd(song$danceability)*abs(song_mod$coefficients[3]) +  sd(song$loudness)*abs(song_mod$coefficients[4]) +   sd(song$acousticness)*abs(song_mod$coefficients[5]) +    sd(song$audio_valence)*abs(song_mod$coefficients[6]) +     sd(song$liveness)*abs(song_mod$coefficients[7]) +      sd(song$time_signature)*abs(song_mod$coefficients[8])
+
+
+instru_sens <- sd(song$instrumentalness)*song_mod$coefficients[2]/sum_std
+dance_sens <- sd(song$danceability)*song_mod$coefficients[3]/sum_std
+loud_sens <- sd(song$loudness)*song_mod$coefficients[4]/sum_std
+acoust_sens <- sd(song$acousticness)*song_mod$coefficients[5]/sum_std
+audiov_sens <- sd(song$audio_valence)*song_mod$coefficients[6]/sum_std
+live_sens <- sd(song$liveness)*song_mod$coefficients[7]/sum_std
+time_sens <- sd(song$time_signature)*song_mod$coefficients[8]/sum_std
+
+
+instru_sens 
+dance_sens  
+loud_sens 
+acoust_sens
+audiov_sens
+live_sens
+time_sens
+
+
+library(RColorBrewer)
+coul <- brewer.pal(5, "Set2")
+
+barplot(c(instru_sens, dance_sens, loud_sens, acoust_sens, audiov_sens, live_sens, time_sens), horiz = TRUE, col=coul)
+
+
+
+barplot(c(abs(instru_sens), abs(dance_sens), abs(loud_sens), abs(acoust_sens), abs(audiov_sens), abs(live_sens), abs(time_sens)), horiz = TRUE,col=coul)
+```
+
+
+#Graph of fit (predicted vs actual)
+As recalled, song_popularity is the target variable so we created a table that compares the first six values of the variable's actual value versus predicted. Additionally, there is a graph to represent these values too. From these results, we have analyzed that there is a significant discrepancy between the predicted and actual values, which suggests that our model is not the best-fitted model. 
+```{r Graph of Fit}
+plot(predict(fit_7c),song$song_popularity,xlab="Predicted Values",ylab="Actual Values")
+abline(0,1,col="red")
+
+data <- data.frame(actual=song$song_popularity,predicted=predict(fit_7c))
+head(data)
+```
+
+In conclusion, in knowing all of the results presented above and in continuation of this project, we would do more feature engineering and build additional models that will test more variables in several ways. Our goal in doing so is to produce a better well-fitted model to predict song_popularity. 
